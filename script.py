@@ -1,4 +1,3 @@
-
 import requests
 import openai
 import os
@@ -27,8 +26,6 @@ while 'next_url' in data:
     for ticker in data['results']:
         tickers.append(ticker)
 
-
-print(len(tickers))
 
 # Write tickers to CSV with the same schema as example_ticker
 csv_columns = [
