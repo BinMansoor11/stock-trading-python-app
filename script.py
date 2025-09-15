@@ -16,12 +16,12 @@ def safe_request(url, retries=5, backoff=2):
     for attempt in range(retries):
         try:
             response = requests.get(url, timeout=10)
-            response.raise_for_status()  # raises for 4xx/5xx
+            response.raise_for_status()
             return response.json()
         except Exception as e:
             print(f"Error: {e}, retrying in {backoff} seconds...")
             time.sleep(backoff)
-            backoff *= 2  # exponential backoff
+            backoff *= 2
     raise Exception(f"Failed after {retries} retries")
 
 response = safe_request(url)
