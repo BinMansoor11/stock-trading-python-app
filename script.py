@@ -1,5 +1,5 @@
 import requests
-import openai
+# import openai
 import os
 import time
 import csv
