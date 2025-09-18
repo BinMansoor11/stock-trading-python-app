@@ -3,6 +3,7 @@ import openai
 import os
 import time
 import csv
+from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -11,6 +12,8 @@ POLYGON_API_KEY= os.getenv("POLYGON_API_KEY")
 LIMIT= 1000
 url=f'https://api.polygon.io/v3/reference/tickers?market=stocks&active=true&order=asc&limit={LIMIT}&sort=ticker&apiKey={POLYGON_API_KEY}'
 tickers = []
+
+print("Fetching tickers from Polygon.io...", datetime.now().time())
 
 def safe_request(url, retries=5, backoff=2):
     for attempt in range(retries):
@@ -33,6 +36,9 @@ while 'next_url' in response:
     response = safe_request(response['next_url'] + f'&apiKey={POLYGON_API_KEY}')
     for ticker in response['results']:
         tickers.append(ticker)
+
+print(f"Total tickers fetched: {len(tickers)}")
+print("Writing to tickers.csv...",  datetime.now().time())
 
 csv_columns = [
 	'ticker', 'name', 'market', 'locale', 'primary_exchange', 'type', 'active',
