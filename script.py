@@ -1,53 +1,54 @@
 import requests
-# import openai
+import csv
 import os
 import time
-import csv
-from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
+POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 
-POLYGON_API_KEY= os.getenv("POLYGON_API_KEY")
-LIMIT= 1000
-url=f'https://api.polygon.io/v3/reference/tickers?market=stocks&active=true&order=asc&limit={LIMIT}&sort=ticker&apiKey={POLYGON_API_KEY}'
-tickers = []
+LIMIT = 1000
 
-print("Fetching tickers from Polygon.io...", datetime.now().time())
 
-def safe_request(url, retries=5, backoff=2):
-    for attempt in range(retries):
-        try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            print(f"Error: {e}, retrying in {backoff} seconds...")
-            time.sleep(backoff)
-            backoff *= 2
-    raise Exception(f"Failed after {retries} retries")
+def run_stock_job():
+    url = f'https://api.polygon.io/v3/reference/tickers?market=stocks&active=true&order=asc&limit={LIMIT}&sort=ticker&apiKey={POLYGON_API_KEY}'
+    response = requests.get(url)
+    tickers = []
 
-response = safe_request(url)
-for ticker in response['results']:
-    tickers.append(ticker)
-
-while 'next_url' in response:
-    time.sleep(10)
-    response = safe_request(response['next_url'] + f'&apiKey={POLYGON_API_KEY}')
-    for ticker in response['results']:
+    data = response.json()
+    for ticker in data['results']:
         tickers.append(ticker)
 
-print(f"Total tickers fetched: {len(tickers)}")
-print("Writing to tickers.csv...",  datetime.now().time())
+    while 'next_url' in data:
+        time.sleep(10)  # to avoid rate limit
+        print('requesting next page', data['next_url'])
+        response = requests.get(data['next_url'] + f'&apiKey={POLYGON_API_KEY}')
+        data = response.json()
+        print(data)
+        for ticker in data['results']:
+            tickers.append(ticker)
 
-csv_columns = [
-	'ticker', 'name', 'market', 'locale', 'primary_exchange', 'type', 'active',
-	'currency_name', 'cik', 'composite_figi', 'share_class_figi', 'last_updated_utc'
-]
+    example_ticker =  {'ticker': 'ZWS', 
+        'name': 'Zurn Elkay Water Solutions Corporation', 
+        'market': 'stocks', 
+        'locale': 'us', 
+        'primary_exchange': 'XNYS', 
+        'type': 'CS', 
+        'active': True, 
+        'currency_name': 'usd', 
+        'cik': '0001439288', 
+        'composite_figi': 'BBG000H8R0N8', 	'share_class_figi': 'BBG001T36GB5', 	'last_updated_utc': '2025-09-11T06:11:10.586204443Z'}
 
-with open('tickers.csv', 'w', newline='', encoding='utf-8') as csvfile:
-	writer = csv.DictWriter(csvfile, fieldnames=csv_columns)
-	writer.writeheader()
-	for ticker in tickers:
-		row = {col: ticker.get(col, '') for col in csv_columns}
-		writer.writerow(row)
+    # Write tickers to CSV with example_ticker schema
+    fieldnames = list(example_ticker.keys())
+    output_csv = 'tickers.csv'
+    with open(output_csv, mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for t in tickers:
+            row = {key: t.get(key, '') for key in fieldnames}
+            writer.writerow(row)
+    print(f'Wrote {len(tickers)} rows to {output_csv}')
+
+if __name__ == '__main__':
+    run_stock_job()
